@@ -2,9 +2,29 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import crypto from "crypto";
 
 const http = httpRouter();
+
+// Web Crypto API HMAC verification
+async function verifyHmac(
+  payload: string,
+  signature: string,
+  secret: string
+): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+  const expectedSig = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return signature === expectedSig;
+}
 
 http.route({
   path: "/worker/callback",
@@ -18,15 +38,12 @@ http.route({
       return new Response("Missing jobId or signature", { status: 400 });
     }
 
-    // Verify HMAC signature
+    // Verify HMAC signature using Web Crypto API
     const callbackSecret = process.env.WORKER_CALLBACK_SECRET!;
     const expectedPayload = JSON.stringify({ jobId });
-    const expectedSignature = crypto
-      .createHmac("sha256", callbackSecret)
-      .update(expectedPayload)
-      .digest("hex");
+    const isValid = await verifyHmac(expectedPayload, signature, callbackSecret);
 
-    if (signature !== expectedSignature) {
+    if (!isValid) {
       return new Response("Invalid signature", { status: 401 });
     }
 
