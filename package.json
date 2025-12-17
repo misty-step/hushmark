@@ -13,6 +13,7 @@
     "worker:deploy": "cd apps/worker && modal deploy modal_app.py"
   },
   "devDependencies": {
+    "next": "^15.1.0",
     "turbo": "^2.3.0",
     "typescript": "^5.7.2"
   },
