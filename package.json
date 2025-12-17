@@ -1,0 +1,23 @@
+{
+  "name": "hushmark",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "convex:dev": "cd apps/web && npx convex dev",
+    "convex:deploy": "cd apps/web && npx convex deploy",
+    "worker:serve": "cd apps/worker && modal serve modal_app.py",
+    "worker:deploy": "cd apps/worker && modal deploy modal_app.py"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
