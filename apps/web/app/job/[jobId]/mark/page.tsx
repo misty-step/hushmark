@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, use } from "react";
+import { useState, useCallback, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -13,6 +13,7 @@ import { useSessionStore } from "@/stores/session";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { Anchor } from "@hushmark/shared";
+import { useConvexAvailable } from "@/lib/convex";
 
 // Dynamic import to avoid SSR issues with WaveSurfer
 const WaveformEditor = dynamic(
@@ -30,12 +31,7 @@ const WaveformEditor = dynamic(
   }
 );
 
-export default function MarkPage({
-  params,
-}: {
-  params: Promise<{ jobId: string }>;
-}) {
-  const { jobId } = use(params);
+function MarkContent({ jobId }: { jobId: string }) {
   const router = useRouter();
   const sessionId = useSessionStore((s) => s.sessionId);
 
@@ -54,21 +50,21 @@ export default function MarkPage({
   const [error, setError] = useState<string | null>(null);
 
   // Initialize prompt from job
-  useState(() => {
-    if (job?.promptRaw) {
+  useEffect(() => {
+    if (job?.promptRaw && !prompt) {
       setPrompt(job.promptRaw);
     }
-    if (job?.anchors) {
+    if (job?.anchors && anchors.length === 0) {
       setAnchors(job.anchors as Anchor[]);
     }
-  });
+  }, [job, prompt, anchors.length]);
 
   // Fetch audio URL for waveform
-  useState(() => {
+  useEffect(() => {
     if (job?.inputObjectKey && !audioUrl) {
       getDownloadUrl({ objectKey: job.inputObjectKey }).then(setAudioUrl);
     }
-  });
+  }, [job, audioUrl, getDownloadUrl]);
 
   const handleSubmit = useCallback(async () => {
     if (!prompt.trim() || !sessionId) return;
@@ -93,64 +89,83 @@ export default function MarkPage({
 
   if (job === undefined || !audioUrl) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </main>
+      </div>
     );
   }
 
   if (job === null) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <p className="text-muted-foreground">Job not found</p>
-          <Link href="/upload" className="text-primary hover:underline">
-            Upload a new file
-          </Link>
-        </div>
-      </main>
+      <div className="text-center space-y-4">
+        <p className="text-muted-foreground">Job not found</p>
+        <Link href="/upload" className="text-primary hover:underline">
+          Upload a new file
+        </Link>
+      </div>
     );
   }
 
   return (
+    <>
+      <div className="flex items-center gap-4">
+        <Link
+          href={`/job/${jobId}/describe`}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold">Mark Examples</h1>
+          <p className="text-muted-foreground">
+            Help us find the sound by marking where it appears
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <PromptInput
+          value={prompt}
+          onChange={setPrompt}
+          disabled={isSubmitting}
+        />
+
+        <WaveformEditor
+          audioUrl={audioUrl}
+          anchors={anchors}
+          onAnchorsChange={setAnchors}
+        />
+
+        <EraseButton
+          onClick={handleSubmit}
+          disabled={!prompt.trim()}
+          loading={isSubmitting}
+        />
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+    </>
+  );
+}
+
+export default function MarkPage({
+  params,
+}: {
+  params: Promise<{ jobId: string }>;
+}) {
+  const { jobId } = use(params);
+  const convexAvailable = useConvexAvailable();
+
+  return (
     <main className="min-h-screen p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/job/${jobId}/describe`}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Mark Examples</h1>
-            <p className="text-muted-foreground">
-              Help us find the sound by marking where it appears
-            </p>
+        {convexAvailable ? (
+          <MarkContent jobId={jobId} />
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        </div>
-
-        <div className="space-y-6">
-          <PromptInput
-            value={prompt}
-            onChange={setPrompt}
-            disabled={isSubmitting}
-          />
-
-          <WaveformEditor
-            audioUrl={audioUrl}
-            anchors={anchors}
-            onAnchorsChange={setAnchors}
-          />
-
-          <EraseButton
-            onClick={handleSubmit}
-            disabled={!prompt.trim()}
-            loading={isSubmitting}
-          />
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </div>
+        )}
       </div>
     </main>
   );

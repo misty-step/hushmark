@@ -8,17 +8,12 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { PromptInput } from "@/components/describe/prompt-input";
 import { EraseButton } from "@/components/describe/erase-button";
-import { FileInfo } from "@/components/upload/file-info";
 import { useSessionStore } from "@/stores/session";
-import { FileAudio, FileVideo, Wand2 } from "lucide-react";
+import { FileAudio, FileVideo, Loader2, Wand2 } from "lucide-react";
 import Link from "next/link";
+import { useConvexAvailable } from "@/lib/convex";
 
-export default function DescribePage({
-  params,
-}: {
-  params: Promise<{ jobId: string }>;
-}) {
-  const { jobId } = use(params);
+function DescribeContent({ jobId }: { jobId: string }) {
   const router = useRouter();
   const sessionId = useSessionStore((s) => s.sessionId);
 
@@ -56,26 +51,75 @@ export default function DescribePage({
 
   if (job === undefined) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </main>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   if (job === null) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <p className="text-muted-foreground">Job not found</p>
-          <Link href="/upload" className="text-primary hover:underline">
-            Upload a new file
-          </Link>
-        </div>
-      </main>
+      <div className="text-center space-y-4">
+        <p className="text-muted-foreground">Job not found</p>
+        <Link href="/upload" className="text-primary hover:underline">
+          Upload a new file
+        </Link>
+      </div>
     );
   }
 
   const Icon = job.inputKind === "video" ? FileVideo : FileAudio;
+
+  return (
+    <>
+      <div className="flex items-center gap-4 rounded-lg border bg-muted/30 p-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+          <Icon className="h-6 w-6 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="truncate font-medium">{job.inputFilename}</p>
+          <p className="text-sm text-muted-foreground">
+            {job.inputKind === "video" ? "Video" : "Audio"}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <PromptInput
+          value={prompt}
+          onChange={setPrompt}
+          disabled={isSubmitting}
+        />
+
+        <EraseButton
+          onClick={handleSubmit}
+          disabled={!prompt.trim()}
+          loading={isSubmitting}
+        />
+
+        <div className="text-center">
+          <Link
+            href={`/job/${jobId}/mark`}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Wand2 className="h-4 w-4" />
+            Not perfect? Mark examples
+          </Link>
+        </div>
+
+        {error && <p className="text-sm text-destructive text-center">{error}</p>}
+      </div>
+    </>
+  );
+}
+
+export default function DescribePage({
+  params,
+}: {
+  params: Promise<{ jobId: string }>;
+}) {
+  const { jobId } = use(params);
+  const convexAvailable = useConvexAvailable();
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4">
@@ -87,43 +131,13 @@ export default function DescribePage({
           </p>
         </div>
 
-        <div className="flex items-center gap-4 rounded-lg border bg-muted/30 p-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-            <Icon className="h-6 w-6 text-primary" />
+        {convexAvailable ? (
+          <DescribeContent jobId={jobId} />
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="truncate font-medium">{job.inputFilename}</p>
-            <p className="text-sm text-muted-foreground">
-              {job.inputKind === "video" ? "Video" : "Audio"}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <PromptInput
-            value={prompt}
-            onChange={setPrompt}
-            disabled={isSubmitting}
-          />
-
-          <EraseButton
-            onClick={handleSubmit}
-            disabled={!prompt.trim()}
-            loading={isSubmitting}
-          />
-
-          <div className="text-center">
-            <Link
-              href={`/job/${jobId}/mark`}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <Wand2 className="h-4 w-4" />
-              Not perfect? Mark examples
-            </Link>
-          </div>
-
-          {error && <p className="text-sm text-destructive text-center">{error}</p>}
-        </div>
+        )}
       </div>
     </main>
   );

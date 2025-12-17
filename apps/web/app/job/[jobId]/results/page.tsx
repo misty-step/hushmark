@@ -14,13 +14,9 @@ import { useSessionStore } from "@/stores/session";
 import { Loader2, Wand2 } from "lucide-react";
 import Link from "next/link";
 import type { JobError } from "@hushmark/shared";
+import { useConvexAvailable } from "@/lib/convex";
 
-export default function ResultsPage({
-  params,
-}: {
-  params: Promise<{ jobId: string }>;
-}) {
-  const { jobId } = use(params);
+function ResultsContent({ jobId }: { jobId: string }) {
   const router = useRouter();
   const sessionId = useSessionStore((s) => s.sessionId);
 
@@ -72,66 +68,60 @@ export default function ResultsPage({
 
   if (job === undefined) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </main>
+      </div>
     );
   }
 
   if (job === null) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <p className="text-muted-foreground">Job not found</p>
-          <Link href="/upload" className="text-primary hover:underline">
-            Upload a new file
-          </Link>
-        </div>
-      </main>
+      <div className="text-center space-y-4">
+        <p className="text-muted-foreground">Job not found</p>
+        <Link href="/upload" className="text-primary hover:underline">
+          Upload a new file
+        </Link>
+      </div>
     );
   }
 
   // Processing states
   if (job.status === "queued" || job.status === "running") {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-xl space-y-8 text-center">
-          <div className="space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <h1 className="text-2xl font-bold">Processing Your Audio</h1>
-            <p className="text-muted-foreground">
-              {job.status === "queued"
-                ? "Waiting in queue..."
-                : "Removing the sound..."}
+      <div className="w-full max-w-xl space-y-8 text-center">
+        <div className="space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <h1 className="text-2xl font-bold">Processing Your Audio</h1>
+          <p className="text-muted-foreground">
+            {job.status === "queued"
+              ? "Waiting in queue..."
+              : "Removing the sound..."}
+          </p>
+          {job.promptNormalized && (
+            <p className="text-sm text-muted-foreground">
+              Removing: <span className="font-medium">{job.promptNormalized}</span>
             </p>
-            {job.promptNormalized && (
-              <p className="text-sm text-muted-foreground">
-                Removing: <span className="font-medium">{job.promptNormalized}</span>
-              </p>
-            )}
-          </div>
-          <JobStatus status={job.status} className="justify-center" />
+          )}
         </div>
-      </main>
+        <JobStatus status={job.status} className="justify-center" />
+      </div>
     );
   }
 
   // Failed state
   if (job.status === "failed" && job.error) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-xl space-y-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Processing Failed</h1>
-          </div>
-          <ErrorDisplay
-            error={job.error as JobError}
-            onRetry={handleRetry}
-            onEditPrompt={handleEditPrompt}
-            onMarkExamples={handleMarkExamples}
-          />
+      <div className="w-full max-w-xl space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Processing Failed</h1>
         </div>
-      </main>
+        <ErrorDisplay
+          error={job.error as JobError}
+          onRetry={handleRetry}
+          onEditPrompt={handleEditPrompt}
+          onMarkExamples={handleMarkExamples}
+        />
+      </div>
     );
   }
 
@@ -147,56 +137,73 @@ export default function ResultsPage({
 
     if (!cleanUrl || !removedUrl) {
       return (
-        <main className="min-h-screen flex items-center justify-center p-4">
+        <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </main>
+        </div>
       );
     }
 
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-xl space-y-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Sound Removed</h1>
-            <p className="mt-2 text-muted-foreground">
-              Successfully removed: {job.promptNormalized}
-            </p>
-          </div>
-
-          <AudioPlayer cleanUrl={cleanUrl} removedUrl={removedUrl} />
-
-          <DownloadButtons
-            cleanAudioUrl={cleanUrl}
-            removedAudioUrl={removedUrl}
-            cleanVideoUrl={videoUrl}
-            isVideo={job.inputKind === "video"}
-          />
-
-          <div className="text-center">
-            <Link
-              href={`/job/${jobId}/mark`}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <Wand2 className="h-4 w-4" />
-              Not perfect? Mark examples for better results
-            </Link>
-          </div>
-
-          {job.compute?.rtf && (
-            <p className="text-center text-xs text-muted-foreground">
-              Processed in {job.compute.gpuSeconds?.toFixed(1)}s (
-              {job.compute.rtf.toFixed(2)}x realtime)
-            </p>
-          )}
+      <div className="w-full max-w-xl space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Sound Removed</h1>
+          <p className="mt-2 text-muted-foreground">
+            Successfully removed: {job.promptNormalized}
+          </p>
         </div>
-      </main>
+
+        <AudioPlayer cleanUrl={cleanUrl} removedUrl={removedUrl} />
+
+        <DownloadButtons
+          cleanAudioUrl={cleanUrl}
+          removedAudioUrl={removedUrl}
+          cleanVideoUrl={videoUrl}
+          isVideo={job.inputKind === "video"}
+        />
+
+        <div className="text-center">
+          <Link
+            href={`/job/${jobId}/mark`}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Wand2 className="h-4 w-4" />
+            Not perfect? Mark examples for better results
+          </Link>
+        </div>
+
+        {job.compute?.rtf && (
+          <p className="text-center text-xs text-muted-foreground">
+            Processed in {job.compute.gpuSeconds?.toFixed(1)}s (
+            {job.compute.rtf.toFixed(2)}x realtime)
+          </p>
+        )}
+      </div>
     );
   }
 
   // Loading download URLs
   return (
-    <main className="min-h-screen flex items-center justify-center p-4">
+    <div className="flex items-center justify-center py-12">
       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+export default function ResultsPage({
+  params,
+}: {
+  params: Promise<{ jobId: string }>;
+}) {
+  const { jobId } = use(params);
+  const convexAvailable = useConvexAvailable();
+
+  return (
+    <main className="min-h-screen flex items-center justify-center p-4">
+      {convexAvailable ? (
+        <ResultsContent jobId={jobId} />
+      ) : (
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      )}
     </main>
   );
 }

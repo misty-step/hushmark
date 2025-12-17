@@ -11,11 +11,12 @@ import { FileInfo } from "@/components/upload/file-info";
 import { UploadProgress } from "@/components/upload/upload-progress";
 import { RightsCheckbox } from "@/components/shared/rights-checkbox";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { useSessionStore } from "@/stores/session";
 import { getInputKind } from "@hushmark/shared";
+import { useConvexAvailable } from "@/lib/convex";
 
-export default function UploadPage() {
+function UploadContent() {
   const router = useRouter();
   const ensureSession = useSessionStore((s) => s.ensureSession);
 
@@ -96,6 +97,43 @@ export default function UploadPage() {
   }, [file, hasRights, ensureSession, getUploadUrl, createJob, router]);
 
   return (
+    <div className="space-y-6">
+      {!file ? (
+        <DropZone onFileSelect={handleFileSelect} disabled={isUploading} />
+      ) : (
+        <FileInfo file={file} onClear={handleClear} />
+      )}
+
+      {isUploading && <UploadProgress progress={uploadProgress} />}
+
+      {file && !isUploading && (
+        <>
+          <RightsCheckbox
+            checked={hasRights}
+            onCheckedChange={setHasRights}
+          />
+
+          <Button
+            onClick={handleUpload}
+            disabled={!hasRights}
+            className="w-full"
+            size="lg"
+          >
+            Continue
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </>
+      )}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+export default function UploadPage() {
+  const convexAvailable = useConvexAvailable();
+
+  return (
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-xl space-y-8">
         <div className="text-center">
@@ -105,36 +143,13 @@ export default function UploadPage() {
           </p>
         </div>
 
-        <div className="space-y-6">
-          {!file ? (
-            <DropZone onFileSelect={handleFileSelect} disabled={isUploading} />
-          ) : (
-            <FileInfo file={file} onClear={handleClear} />
-          )}
-
-          {isUploading && <UploadProgress progress={uploadProgress} />}
-
-          {file && !isUploading && (
-            <>
-              <RightsCheckbox
-                checked={hasRights}
-                onCheckedChange={setHasRights}
-              />
-
-              <Button
-                onClick={handleUpload}
-                disabled={!hasRights}
-                className="w-full"
-                size="lg"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </>
-          )}
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </div>
+        {convexAvailable ? (
+          <UploadContent />
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
       </div>
     </main>
   );
