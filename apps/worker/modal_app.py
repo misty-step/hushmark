@@ -17,21 +17,31 @@ from pydantic import BaseModel
 # IMAGE DEFINITION
 # ============================================================================
 
+# Dependency versions pinned to match AudioSep's environment.yml
+# AudioSep requires NumPy 1.x (NumPy 2.0 has breaking ABI changes)
+# and lightning>=2.0 (not the old pytorch_lightning package)
 image = (
     modal.Image.debian_slim(python_version="3.10")
     .apt_install("ffmpeg", "git", "libsndfile1")
     .pip_install(
+        # Core ML stack - pinned for NumPy 1.x compatibility
+        "numpy==1.23.5",
         "torch==2.1.0",
         "torchaudio==2.1.0",
-        "transformers>=4.36.0",
+        # AudioSep uses 'import lightning.pytorch' (not pytorch_lightning)
+        "lightning==2.0.1",
+        "transformers==4.28.1",
+        # Audio processing
+        "librosa==0.10.0",
+        "soundfile>=0.12.0",
+        "scipy==1.10.1",
+        # Infra
         "boto3>=1.34.0",
         "httpx>=0.25.0",
         "fastapi>=0.104.0",
         "pydantic>=2.5.0",
-        "librosa>=0.10.0",
-        "soundfile>=0.12.0",
         "huggingface_hub>=0.19.0",
-        "pytorch_lightning",
+        # AudioSep dependencies
         "einops",
         "ftfy",
         "braceexpand",
