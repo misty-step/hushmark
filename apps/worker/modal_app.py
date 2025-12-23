@@ -17,26 +17,36 @@ from pydantic import BaseModel
 # IMAGE DEFINITION
 # ============================================================================
 
+# Dependency versions pinned to match AudioSep's environment.yml
+# AudioSep requires NumPy 1.x (NumPy 2.0 has breaking ABI changes)
+# and lightning>=2.0 (not the old pytorch_lightning package)
 image = (
     modal.Image.debian_slim(python_version="3.10")
     .apt_install("ffmpeg", "git", "libsndfile1")
     .pip_install(
+        # Core ML stack - pinned for NumPy 1.x compatibility
+        "numpy==1.23.5",
         "torch==2.1.0",
         "torchaudio==2.1.0",
-        "transformers>=4.36.0",
-        "boto3>=1.34.0",
-        "httpx>=0.25.0",
-        "fastapi>=0.104.0",
-        "pydantic>=2.5.0",
-        "librosa>=0.10.0",
-        "soundfile>=0.12.0",
-        "huggingface_hub>=0.19.0",
-        "pytorch_lightning",
-        "einops",
-        "ftfy",
-        "braceexpand",
-        "webdataset",
-        "museval",
+        # AudioSep uses 'import lightning.pytorch' (not pytorch_lightning)
+        "lightning==2.0.1",
+        "transformers==4.28.1",
+        # Audio processing
+        "librosa==0.10.0",
+        "soundfile==0.12.1",
+        "scipy==1.10.1",
+        # Infra - pinned for reproducibility
+        "boto3==1.34.0",
+        "httpx==0.25.0",
+        "fastapi==0.109.1",  # Patched for PYSEC-2024-38
+        "pydantic==2.5.0",
+        "huggingface_hub==0.19.0",
+        # AudioSep dependencies - pinned for reproducibility
+        "einops==0.6.1",
+        "ftfy==6.1.1",
+        "braceexpand==0.1.7",
+        "webdataset==0.2.60",
+        "museval==0.4.0",
     )
     .run_commands(
         "git clone https://github.com/Audio-AGI/AudioSep.git /opt/audiosep",
