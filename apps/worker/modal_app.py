@@ -33,20 +33,20 @@ image = (
         "transformers==4.28.1",
         # Audio processing
         "librosa==0.10.0",
-        "soundfile>=0.12.0",
+        "soundfile==0.12.1",
         "scipy==1.10.1",
-        # Infra
-        "boto3>=1.34.0",
-        "httpx>=0.25.0",
-        "fastapi>=0.104.0",
-        "pydantic>=2.5.0",
-        "huggingface_hub>=0.19.0",
-        # AudioSep dependencies
-        "einops",
-        "ftfy",
-        "braceexpand",
-        "webdataset",
-        "museval",
+        # Infra - pinned for reproducibility
+        "boto3==1.34.0",
+        "httpx==0.25.0",
+        "fastapi==0.109.1",  # Patched for PYSEC-2024-38
+        "pydantic==2.5.0",
+        "huggingface_hub==0.19.0",
+        # AudioSep dependencies - pinned for reproducibility
+        "einops==0.6.1",
+        "ftfy==6.1.1",
+        "braceexpand==0.1.7",
+        "webdataset==0.2.60",
+        "museval==0.4.0",
     )
     .run_commands(
         "git clone https://github.com/Audio-AGI/AudioSep.git /opt/audiosep",
